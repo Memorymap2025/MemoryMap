@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Memory Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #fdf9f6;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      padding: 20px 0;
+      font-size: 2em;
+      color: #6a4e42;
+    }
+    .auth-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #fdf9f6;
+    }
+    .auth-screen input {
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    .auth-screen button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #6a4e42;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+    #map {
+      display: none;
+      height: 90vh;
+    }
+    .leaflet-popup-content img {
+      width: 100%;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .leaflet-popup-content p {
+      margin: 8px 0 0;
+      font-weight: 500;
+    }
+    .fullscreen-img {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .fullscreen-img img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 10px;
+    }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="auth-screen" id="auth">
+    <h1>🔐 Enter your memory map password</h1>
+    <input type="password" id="password" placeholder="Enter password" />
+    <button onclick="checkPassword()">Unlock</button>
+  </div>
+
+  <h1 id="title" style="display:none;">Our Memory Map</h1>
+  <div id="map"></div>
+
+  <div class="fullscreen-img" id="fullscreen" onclick="hideFullscreen()">
+    <img id="fullscreenImg" src="" alt="Fullscreen View" />
+  </div>
+
+  <script>
+    const CORRECT_PASSWORD = "1709";
+
+    function checkPassword() {
+      const input = document.getElementById("password").value;
+      if (input === CORRECT_PASSWORD) {
+        document.getElementById("auth").style.display = "none";
+        document.getElementById("map").style.display = "block";
+        document.getElementById("title").style.display = "block";
+        initMap();
+      } else {
+        alert("Wrong password. Please try again.");
+      }
+    }
+
+    function showFullscreen(src) {
+      const full = document.getElementById("fullscreen");
+      const img = document.getElementById("fullscreenImg");
+      img.src = src;
+      full.style.display = "flex";
+    }
+
+    function hideFullscreen() {
+      document.getElementById("fullscreen").style.display = "none";
+    }
+
+    function initMap() {
+      const map = L.map('map').setView([33.8938, 35.5018], 8);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      const memories = [
+        {
+          coords: [34.2566, 35.6588],
+          title: 'Anniversary – Batroun',
+          imgs: ['photos/Batroun souks.png']
+        },
+        {
+          coords: [33.88254, 35.63289],
+          title: 'Wedding – Broumana',
+          imgs: ['photos/Bremena church.png']
+        },
+		{
+          coords: [34.1235, 35.6534],
+          title: '1st date, Jbeil',
+          imgs: ['photos/Jbeil.png']
+        },
+		{
+          coords: [33.9536, 35.6437],
+          title: 'Paintball – Jeita',
+          imgs: ['photos/Paintball Jeita.png']
+        },
+		{
+          coords: [33.9803, 35.6529],
+          title: 'Paragliding – Harissa',
+          imgs: ['photos/Paragliding harissa.png']
+        },
+		{
+          coords: [34.2709, 35.6871],
+          title: 'Hikinh – Sad el Msaylha',
+          imgs: ['photos/Sad el Msalyha.png']
+        },
+        {
+          coords: [33.2705, 35.2038],
+          title: 'Beach day – Sour',
+          imgs: ['photos/Sour sea.png']
+        }
+      ];
+
+      memories.forEach(memory => {
+        const imagesHTML = memory.imgs.map(img => `<img src="${img}" alt="${memory.title}" onclick="showFullscreen('${img}')" />`).join('');
+        L.marker(memory.coords).addTo(map).bindPopup(
+          `${imagesHTML}<p>${memory.title}</p>`
+        );
+      });
+    }
+  </script>
+</body>
+</html>
