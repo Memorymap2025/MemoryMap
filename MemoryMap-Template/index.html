@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Memory Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    .hero-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 600px;
+      padding: 0 20px;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      animation: fadeInUp 1s ease-out;
+    }
+
+    .hero-subtitle {
+      font-size: 1.3rem;
+      font-weight: 300;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+      animation: fadeInUp 1s ease-out 0.2s both;
+    }
+
+    .unlock-section {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: fadeInUp 1s ease-out 0.4s both;
+    }
+
+    .unlock-title {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+    }
+
+    .password-input {
+      width: 100%;
+      max-width: 300px;
+      padding: 15px 20px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 50px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      text-align: center;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .password-input:focus {
+      outline: none;
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .unlock-btn {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+    }
+
+    .unlock-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
+    }
+
+    .map-container {
+      display: none;
+      height: 100vh;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    .map-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1.5rem 0;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .map-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .map-header-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .map-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      color: white;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .map-subtitle {
+      color: rgba(255,255,255,0.9);
+      font-size: 1.1rem;
+    }
+
+    #map {
+      height: calc(100vh - 320px);
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      #map {
+        height: calc(100vh - 280px);
+      }
+    }
+
+    .leaflet-popup-content {
+      text-align: center;
+      padding: 0;
+      margin: 0;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: white;
+    }
+
+    .memory-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .memory-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .memory-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .memory-photos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .memory-photos img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      border: 3px solid rgba(255,255,255,0.3);
+    }
+
+    .memory-photos img:hover {
+      transform: scale(1.05) rotate(2deg);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    }
+
+    .memory-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .memory-description {
+      font-size: 1rem;
+      margin-bottom: 15px;
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+
+    .memory-date {
+      background: rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-block;
+      backdrop-filter: blur(10px);
+    }
+
+    .leaflet-popup-tip {
+      background: white;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 20px;
+      padding: 0;
+    }
+
+    /* Custom Map Styling */
+    .leaflet-container {
+      background: #f8fafc !important;
+    }
+
+    /* Custom Marker Styles */
+    .custom-marker {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 4px solid white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      }
+      50% {
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.8), 0 0 0 10px rgba(102, 126, 234, 0.1);
+      }
+      100% {
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      }
+    }
+
+    /* Map Header Enhancement */
+    .map-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .map-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .map-header-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .map-title {
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .map-subtitle {
+      opacity: 0.9;
+    }
+
+    /* Timeline Styles */
+    .timeline-container {
+      display: none;
+      flex-direction: column;
+      height: 120px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-top: 2px solid rgba(255,255,255,0.2);
+      position: relative;
+    }
+
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .timeline-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 800px;
+      padding: 0 20px;
+    }
+
+    .timeline-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .play-button {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+      padding: 12px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      margin-right: 20px;
+    }
+
+    .play-button:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.05);
+    }
+
+    .timeline-info {
+      color: white;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .timeline-bar {
+      position: relative;
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 3px;
+      margin-top: 10px;
+    }
+
+    .timeline-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 6px;
+      background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+      border-radius: 3px;
+      transition: width 0.3s linear;
+      box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    }
+
+    .timeline-pin {
+      position: absolute;
+      top: -8px;
+      width: 20px;
+      height: 20px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      border: 3px solid white;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    .timeline-pin:hover {
+      transform: scale(1.2);
+      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+    }
+
+    .timeline-pin.active {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .fullscreen-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .fullscreen-img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 15px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .floating-elements {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .floating-element {
+      position: absolute;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 20px;
+      animation: float 6s infinite linear;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) rotate(0deg);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100px) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .error-message {
+      color: #ff6b6b;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2.5rem;
+      }
+      
+      .hero-subtitle {
+        font-size: 1.1rem;
+      }
+      
+      .unlock-section {
+        padding: 1.5rem;
+        margin: 0 20px;
+      }
+
+      .map-title {
+        font-size: 2rem;
+      }
+
+      .map-subtitle {
+        font-size: 1rem;
+      }
+
+      .map-header {
+        padding: 1rem 0;
+      }
+
+      #map {
+        height: calc(100vh - 260px);
+      }
+
+      .timeline-container {
+        height: 100px;
+      }
+
+      .timeline-controls {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .play-button {
+        margin-right: 0;
+        margin-bottom: 10px;
+      }
+
+      .memory-photos {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .memory-photos img {
+        height: 100px;
+      }
+
+      .memory-title {
+        font-size: 1.5rem;
+      }
+
+      .memory-description {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title {
+        font-size: 2rem;
+      }
+      
+      .hero-subtitle {
+        font-size: 1rem;
+      }
+
+      .map-title {
+        font-size: 1.8rem;
+      }
+
+      .map-subtitle {
+        font-size: 0.9rem;
+      }
+
+      .map-header {
+        padding: 0.8rem 0;
+      }
+
+      #map {
+        height: calc(100vh - 240px);
+      }
+
+      .timeline-container {
+        height: 90px;
+      }
+
+      .timeline-controls {
+        margin-bottom: 10px;
+      }
+
+      .play-button {
+        padding: 8px 16px;
+        font-size: 1rem;
+      }
+
+      .timeline-info {
+        font-size: 0.8rem;
+      }
+
+      .memory-card {
+        padding: 20px;
+      }
+
+      .memory-title {
+        font-size: 1.3rem;
+      }
+
+      .memory-description {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="hero-section" id="hero">
+    <div class="floating-elements">
+      <div class="floating-element" style="left: 10%; animation-delay: 0s;">📸</div>
+      <div class="floating-element" style="left: 20%; animation-delay: 1s;">🗺️</div>
+      <div class="floating-element" style="left: 30%; animation-delay: 2s;">💫</div>
+      <div class="floating-element" style="left: 40%; animation-delay: 3s;">🌟</div>
+      <div class="floating-element" style="left: 50%; animation-delay: 4s;">📸</div>
+      <div class="floating-element" style="left: 60%; animation-delay: 5s;">🗺️</div>
+      <div class="floating-element" style="left: 70%; animation-delay: 0.5s;">💫</div>
+      <div class="floating-element" style="left: 80%; animation-delay: 1.5s;">🌟</div>
+      <div class="floating-element" style="left: 90%; animation-delay: 2.5s;">📸</div>
+    </div>
+    
+    <div class="hero-content">
+      <h1 class="hero-title">Memory Map</h1>
+      <p class="hero-subtitle">A beautiful journey through your most precious memories</p>
+      
+      <div class="unlock-section">
+        <h2 class="unlock-title">🔐 Enter Your Access Code</h2>
+        <input type="password" id="password" class="password-input" placeholder="Enter your code..." />
+        <button onclick="checkPassword()" class="unlock-btn">Unlock Memories</button>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-container" id="mapContainer">
+    <div class="map-header">
+      <div class="map-header-content">
+        <h1 class="map-title">Memory Map</h1>
+        <p class="map-subtitle">Click on the markers to explore your beautiful memories</p>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div class="timeline-container" id="timelineContainer">
+      <div class="timeline-content">
+        <div class="timeline-controls">
+          <button class="play-button" id="playPause">▶️ Play Timeline</button>
+          <div class="timeline-info" id="timelineInfo">Memory 1 of 4</div>
+        </div>
+        <div class="timeline-bar" id="timelineBar">
+          <div class="timeline-progress" id="timelineProgress"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fullscreen-overlay" id="fullscreen" onclick="hideFullscreen()">
+    <img id="fullscreenImg" class="fullscreen-img" src="" alt="Fullscreen View" />
+  </div>
+
+  <script>
+    // ========================================
+    // CUSTOMIZATION SECTION - EASY TO UPDATE
+    // ========================================
+    
+    // Change this password for each client
+    const CORRECT_PASSWORD = "1709";
+    
+    // Update the title and subtitle for each client
+    const CUSTOM_TITLE = "Memory Map";
+    const CUSTOM_SUBTITLE = "A beautiful journey through your most precious memories";
+    
+    // Add your client's memories here - just copy this format for each memory
+    const memories = [
+      {
+        coords: [34.66, 33.01], // [latitude, longitude] - find these on Google Maps
+        title: 'Cyprus Lake',
+        description: 'Our romantic getaway by the crystal clear waters',
+        date: '2023-06-15', // Optional: add date
+        imgs: ['photos/batroun-beach.jpeg'] // Add your client's photo filenames here
+      },
+      {
+        coords: [33.9464, 35.6097],
+        title: 'Nahr el Kaleb',
+        description: 'A peaceful afternoon by the river',
+        date: '2023-07-20',
+        imgs: ['photos/love lock bridge.jpeg']
+      },
+      {
+        coords: [34.2096, 35.8779],
+        title: 'Tannourine Dinner',
+        description: 'A special dinner with grandma in the mountains',
+        date: '2023-08-10',
+        imgs: ['photos/tannourine-hike.jpeg']
+      },
+      {
+        coords: [33.9803, 35.6529],
+        title: 'Harissa Visit',
+        description: 'Our beautiful visit to the Lady of Lebanon',
+        date: '2023-09-05',
+        imgs: ['photos/wedding Harissa.jpeg']
+      }
+    ];
+
+    // ========================================
+    // END CUSTOMIZATION SECTION
+    // ========================================
+
+    // Timeline variables
+    let map;
+    let currentIndex = 0;
+    let interval;
+    let isPlaying = false;
+
+    function checkPassword() {
+      const input = document.getElementById("password").value;
+      const errorDiv = document.getElementById("errorMessage");
+      
+      if (input === CORRECT_PASSWORD) {
+        document.getElementById("hero").style.display = "none";
+        document.getElementById("mapContainer").style.display = "block";
+        document.getElementById("timelineContainer").style.display = "flex";
+        initMap();
+      } else {
+        errorDiv.textContent = "Incorrect code. Please try again.";
+        errorDiv.style.display = "block";
+        setTimeout(() => {
+          errorDiv.style.display = "none";
+        }, 3000);
+      }
+    }
+
+    function showFullscreen(src) {
+      const full = document.getElementById("fullscreen");
+      const img = document.getElementById("fullscreenImg");
+      img.src = src;
+      full.style.display = "flex";
+    }
+
+    function hideFullscreen() {
+      document.getElementById("fullscreen").style.display = "none";
+    }
+
+    function initMap() {
+      // Calculate center point from all memories
+      const lats = memories.map(m => m.coords[0]);
+      const lngs = memories.map(m => m.coords[1]);
+      const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+      const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+      
+      map = L.map('map').setView([centerLat, centerLng], 8);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      const bounds = [];
+
+      memories.forEach((memory, index) => {
+        const imagesHTML = memory.imgs.map(img => 
+          `<img src="${img}" alt="${memory.title}" onclick="showFullscreen('${img}')" />`
+        ).join('');
+        
+        const dateHTML = memory.date ? `<div class="memory-date">${memory.date}</div>` : '';
+        
+        const popupContent = `
+          <div class="memory-card">
+            <div class="memory-content">
+              <div class="memory-photos">
+                ${imagesHTML}
+              </div>
+              <h3 class="memory-title">${memory.title}</h3>
+              <p class="memory-description">${memory.description}</p>
+              ${dateHTML}
+            </div>
+          </div>
+        `;
+        
+        // Create custom marker with number
+        const customIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            animation: pulse 2s infinite;
+          ">${index + 1}</div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        });
+        
+        L.marker(memory.coords, { icon: customIcon }).addTo(map).bindPopup(popupContent);
+        bounds.push(memory.coords);
+      });
+
+      // Fit map to show all memories
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+
+      // Initialize timeline
+      drawTimeline();
+      updateTimelineInfo();
+
+      // Handle window resize for mobile
+      window.addEventListener('resize', function() {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      });
+    }
+
+    function drawTimeline() {
+      const bar = document.getElementById("timelineBar");
+      const total = memories.length;
+
+      memories.forEach((mem, i) => {
+        const left = (i / (total - 1)) * 100;
+        const pin = document.createElement("div");
+        pin.classList.add("timeline-pin");
+        pin.style.left = `${left}%`;
+        pin.onclick = () => jumpTo(i);
+        bar.appendChild(pin);
+      });
+    }
+
+    function jumpTo(index) {
+      currentIndex = index;
+      const m = memories[index];
+      map.setView(m.coords, 12);
+      
+      // Create popup content
+      const imagesHTML = m.imgs.map(img => 
+        `<img src="${img}" alt="${m.title}" onclick="showFullscreen('${img}')" />`
+      ).join('');
+      
+      const dateHTML = m.date ? `<div class="memory-date">${m.date}</div>` : '';
+      
+      const popupContent = `
+        <div class="memory-card">
+          <div class="memory-content">
+            <div class="memory-photos">
+              ${imagesHTML}
+            </div>
+            <h3 class="memory-title">${m.title}</h3>
+            <p class="memory-description">${m.description}</p>
+            ${dateHTML}
+          </div>
+        </div>
+      `;
+      
+      L.popup()
+        .setLatLng(m.coords)
+        .setContent(popupContent)
+        .openOn(map);
+      
+      updateProgress();
+      updateTimelineInfo();
+      updateActivePin();
+    }
+
+    function updateProgress() {
+      const percent = (currentIndex / (memories.length - 1)) * 100;
+      document.getElementById("timelineProgress").style.width = `${percent}%`;
+    }
+
+    function updateTimelineInfo() {
+      document.getElementById("timelineInfo").textContent = `Memory ${currentIndex + 1} of ${memories.length}`;
+    }
+
+    function updateActivePin() {
+      const pins = document.querySelectorAll('.timeline-pin');
+      pins.forEach((pin, i) => {
+        pin.classList.toggle('active', i === currentIndex);
+      });
+    }
+
+    function togglePlayPause() {
+      const button = document.getElementById("playPause");
+      if (isPlaying) {
+        clearInterval(interval);
+        button.textContent = "▶️ Play Timeline";
+        isPlaying = false;
+      } else {
+        interval = setInterval(() => {
+          jumpTo(currentIndex);
+          currentIndex++;
+          if (currentIndex >= memories.length) {
+            clearInterval(interval);
+            isPlaying = false;
+            button.textContent = "▶️ Play Timeline";
+            return;
+          }
+        }, 3000); // 3 seconds per memory
+        button.textContent = "⏸️ Pause";
+        isPlaying = true;
+      }
+    }
+
+    // Allow Enter key to submit password
+    document.getElementById("password").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        checkPassword();
+      }
+    });
+
+    // Timeline play button event listener
+    document.getElementById("playPause").onclick = togglePlayPause;
+  </script>
+</body>
+</html>
